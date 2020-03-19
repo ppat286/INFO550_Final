@@ -1,0 +1,20 @@
+1. How does playcalling per down/distance from the endzone change from preseason to postseason? Over the years and by team?
+	- https://github.com/ryurko/nflscrapR-data/tree/master/play_by_play_data
+	- look at reasonable access (game time, etc.) to figure out distribution of playtypes, look at specific situation
+	- generic -> specific story
+	- potentially show rudimentary apps, show progression of working with data from start, tell a story
+		- explain issues with analysis/deployment
+			- potentially putting data into a database/etc.
+	- what happened, what didn't happen, what were the challenges? 
+		- code that I tried, etc. 
+		- here's what I came up with
+
+2. In the post-season, what is the most effective playcall for each down and distance (non-redzone plays)?
+
+Both of these in a Shiny webapp or something similar so that they're deployable/shareable
+
+3. Scrape Twitter and/or Reddit (game threads) and look at sentiment analysis after risky plays? Not sure how I would quantify risky yet, maybe something like postseason 4th down plays where the play isn't a kick? 
+
+	- rtweets package
+	- fantasy football forum, ask a question
+		- what kinds of information would you like to know?
