@@ -1,25 +1,32 @@
 library(dplyr)
 library(readr)
 library(ggplot2)
+library(RedditExtractoR)
 
 
 # Read in one year's data
-pre_2009 = read_csv("data/pre_season/pre_pbp_2009.csv")
-reg_2009 = read_csv("data/regular_season/reg_pbp_2009.csv")
-post_2009 = read_csv("data/post_season/post_pbp_2009.csv")
+pre_2019 = read_csv("data/pre_season/pre_pbp_2009.csv")
+reg_2019 = read_csv("data/regular_season/reg_pbp_2009.csv")
+post_2019 = read_csv("data/post_season/post_pbp_2009.csv")
 
 # Look at data
-summary(reg_2009)
-head(reg_2009)
+summary(reg_2019)
+head(reg_2019)
 
 # How many 4th downs per season? ~ 4,000 in the regular season, 8-10% of plays, 10 in pre-season -> 8 in post-season
-table(pre_2009$down)/nrow(pre_2009)
-table(reg_2009$down)/nrow(reg_2009)
-table(post_2009$down)/nrow(post_2009)
+table(pre_2019$down)/nrow(pre_2019)
+table(reg_2019$down)/nrow(reg_2019)
+table(post_2019$down)/nrow(post_2019)
+
+par(mfrow=c(2,2))
+barplot(prop.table(table(pre_2019$down)), main = "Pre-season 2019", xlab = "Play Down", ylab = "Frequency")
+barplot(prop.table(table(reg_2019$down)), main = "Regular Season 2019", xlab = "Play Down", ylab = "Frequency")
+barplot(prop.table(table(post_2019$down)), main = "Post-season 2019", xlab = "Play Down", ylab = "Frequency")
+
 
 
 # How many 4th downs per game? ~ 16 4th downs per game
-fourth = reg_2009 %>% 
+fourth = reg_2019 %>% 
   filter(down == 4) %>%
   group_by(game_id) %>%
   summarize(count = n())
@@ -52,3 +59,11 @@ reg_seasons = rbind(reg_2009,
       reg_2019)
 
 saveRDS(reg_seasons, "reg_seasons.rds")
+
+
+# Test Reddit scraping
+
+Reddit_url = "https://www.reddit.com/r/nfl/comments/e4kgbx/game_thread_san_francisco_49ers_101_at_baltimore"
+url_data = reddit_content(Reddit_url)
+
+table(url_data$comment_score)
