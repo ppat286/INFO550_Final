@@ -1,4 +1,5 @@
 library(dplyr)
+library(tidyr)
 library(readr)
 library(ggplot2)
 library(RedditExtractoR)
@@ -67,3 +68,4 @@ Reddit_url = "https://www.reddit.com/r/nfl/comments/e4kgbx/game_thread_san_franc
 url_data = reddit_content(Reddit_url)
 
 table(url_data$comment_score)
+table(url_data$controversiality)
