@@ -36,6 +36,7 @@ fourth %>% summarize(mean(count))
 
 
 # Make one regular season rds file for analysis
+reg_2009 <- read_csv("data/regular_season/reg_pbp_2009.csv")
 reg_2010 <- read_csv("data/regular_season/reg_pbp_2010.csv")
 reg_2011 <- read_csv("data/regular_season/reg_pbp_2011.csv")
 reg_2012 <- read_csv("data/regular_season/reg_pbp_2012.csv")
@@ -60,6 +61,63 @@ reg_seasons = rbind(reg_2009,
       reg_2019)
 
 saveRDS(reg_seasons, "reg_seasons.rds")
+
+# Make one preseason season rds file for analysis
+pre_2009 <- read_csv("data/pre_season/pre_pbp_2009.csv")
+pre_2010 <- read_csv("data/pre_season/pre_pbp_2010.csv")
+pre_2011 <- read_csv("data/pre_season/pre_pbp_2011.csv")
+pre_2012 <- read_csv("data/pre_season/pre_pbp_2012.csv")
+pre_2013 <- read_csv("data/pre_season/pre_pbp_2013.csv")
+pre_2014 <- read_csv("data/pre_season/pre_pbp_2014.csv")
+pre_2015 <- read_csv("data/pre_season/pre_pbp_2015.csv")
+pre_2016 <- read_csv("data/pre_season/pre_pbp_2016.csv")
+pre_2017 <- read_csv("data/pre_season/pre_pbp_2017.csv")
+pre_2018 <- read_csv("data/pre_season/pre_pbp_2018.csv")
+pre_2019 <- read_csv("data/pre_season/pre_pbp_2019.csv")
+
+pre_seasons = rbind(pre_2009,
+                    pre_2010,
+                    pre_2011,
+                    pre_2012,
+                    pre_2013,
+                    pre_2014,
+                    pre_2015,
+                    pre_2016,
+                    pre_2017,
+                    pre_2018,
+                    pre_2019)
+
+saveRDS(pre_seasons, "pre_seasons.rds")
+
+# Make one postseason season rds file for analysis
+post_2009 <- read_csv("data/post_season/post_pbp_2009.csv")
+post_2010 <- read_csv("data/post_season/post_pbp_2010.csv")
+post_2011 <- read_csv("data/post_season/post_pbp_2011.csv")
+post_2012 <- read_csv("data/post_season/post_pbp_2012.csv")
+post_2013 <- read_csv("data/post_season/post_pbp_2013.csv")
+post_2014 <- read_csv("data/post_season/post_pbp_2014.csv")
+post_2015 <- read_csv("data/post_season/post_pbp_2015.csv")
+post_2016 <- read_csv("data/post_season/post_pbp_2016.csv")
+post_2017 <- read_csv("data/post_season/post_pbp_2017.csv")
+post_2018 <- read_csv("data/post_season/post_pbp_2018.csv")
+post_2019 <- read_csv("data/post_season/post_pbp_2019.csv")
+
+post_2019 = post_2019[, !(colnames(post_2019) %in% c("X1"))]
+
+post_seasons = rbind(post_2009,
+                    post_2010,
+                    post_2011,
+                    post_2012,
+                    post_2013,
+                    post_2014,
+                    post_2015,
+                    post_2016,
+                    post_2017,
+                    post_2018,
+                    post_2019)
+
+saveRDS(post_seasons, "post_seasons.rds")
+
 
 
 # Test Reddit scraping

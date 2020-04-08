@@ -1,0 +1,50 @@
+---
+title: "test"
+author: "Priyam Patel"
+date: "4/1/2020"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(shiny)
+library(plotly)
+```
+
+## R Markdown
+
+```{r data, echo = FALSE}
+pre = readRDS("D:/Priyam/Desktop/INFO550_Final/code/pre_seasons.rds")
+reg = readRDS("D:/Priyam/Desktop/INFO550_Final/code/reg_seasons.rds")
+post = readRDS("D:/Priyam/Desktop/INFO550_Final/code/post_seasons.rds")
+```
+
+```{r plot}
+# https://rmarkdown.rstudio.com/lesson-14.html
+selectInput("type", "Choose a game type",
+            choices = c("Preseason", "Regular Season", "Postseason"))
+
+playData = reactive({
+  switch(input$type,
+         "Preseason" = pre,
+         "Regular Season" = reg,
+         "Postseason" = post)
+})
+
+# https://plotly.com/r/filled-area-plots
+# For example, being on your own 20 yard line means you are 80 yards from their end zone, but being on their 20 yard line means you are 20 yards from their end zone.
+
+renderPlotly(
+  playData() %>%
+    plot_ly(x=playData()$game_seconds_remaining, y=playData()$yardline_100, type = 'scatter', mode = 'lines', fill = 'tozeroy')
+)
+
+# Next steps:
+# Filter down data, maybe on initial read to speed up plots/document
+# Calculate play type percentage, filter data on time remaining
+# Add filled area plots
+
+```
+
