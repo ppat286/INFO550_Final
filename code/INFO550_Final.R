@@ -48,6 +48,19 @@ reg_2017 <- read_csv("data/regular_season/reg_pbp_2017.csv")
 reg_2018 <- read_csv("data/regular_season/reg_pbp_2018.csv")
 reg_2019 <- read_csv("data/regular_season/reg_pbp_2019.csv")
 
+reg_2009$Season = 2009
+reg_2010$Season = 2010
+reg_2011$Season = 2011
+reg_2012$Season = 2012
+reg_2013$Season = 2013
+reg_2014$Season = 2014
+reg_2015$Season = 2015
+reg_2016$Season = 2016
+reg_2017$Season = 2017
+reg_2018$Season = 2018
+reg_2019$Season = 2019
+
+
 reg_seasons = rbind(reg_2009,
       reg_2010,
       reg_2011,
@@ -74,6 +87,19 @@ pre_2016 <- read_csv("data/pre_season/pre_pbp_2016.csv")
 pre_2017 <- read_csv("data/pre_season/pre_pbp_2017.csv")
 pre_2018 <- read_csv("data/pre_season/pre_pbp_2018.csv")
 pre_2019 <- read_csv("data/pre_season/pre_pbp_2019.csv")
+
+pre_2009$Season = 2009
+pre_2010$Season = 2010
+pre_2011$Season = 2011
+pre_2012$Season = 2012
+pre_2013$Season = 2013
+pre_2014$Season = 2014
+pre_2015$Season = 2015
+pre_2016$Season = 2016
+pre_2017$Season = 2017
+pre_2018$Season = 2018
+pre_2019$Season = 2019
+
 
 pre_seasons = rbind(pre_2009,
                     pre_2010,
@@ -103,6 +129,19 @@ post_2018 <- read_csv("data/post_season/post_pbp_2018.csv")
 post_2019 <- read_csv("data/post_season/post_pbp_2019.csv")
 
 post_2019 = post_2019[, !(colnames(post_2019) %in% c("X1"))]
+
+post_2009$Season = 2009
+post_2010$Season = 2010
+post_2011$Season = 2011
+post_2012$Season = 2012
+post_2013$Season = 2013
+post_2014$Season = 2014
+post_2015$Season = 2015
+post_2016$Season = 2016
+post_2017$Season = 2017
+post_2018$Season = 2018
+post_2019$Season = 2019
+
 
 post_seasons = rbind(post_2009,
                     post_2010,
