@@ -9,6 +9,14 @@
 		- code that I tried, etc. 
 		- here's what I came up with
 
+
+
+Probability of positive EPA at each yard line per play type
+	- use ggplotly instead of plotly
+	
+
+
+
 2. In the post-season, what is the most effective playcall for each down and distance (non-redzone plays)?
 
 Both of these in a Shiny webapp or something similar so that they're deployable/shareable

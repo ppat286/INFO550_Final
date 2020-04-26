@@ -48,6 +48,8 @@ selectInput("dwn", "Choose a down",
                         "3rd Down" = 3,
                         "4th Down" = 4))
 
+
+# Change this time remaining in quarter, add quarter selection box
 sliderInput("time", "Maximum time remaining in game:",
                   min = 0, max = 60,
                   value = 1, step = 5,
@@ -62,52 +64,64 @@ playData = reactive({
   switch(input$type,
          "Preseason" = pre %>%
            filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type),
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
          "Regular Season" = reg %>%
            filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type),
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
          "Postseason" = post %>%
            filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type))
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa))
 })
 
 # https://plotly.com/r/filled-area-plots
 # For example, being on your own 20 yard line means you are 80 yards from their end zone, but being on their 20 yard line means you are 20 yards from their end zone.
 
 # 
-renderTable(playData()%>%
-    group_by(yardline_100, play_type) %>%
-    summarize(plays = n()) %>%
-    ungroup() %>%
-    complete(play_type, nesting(yardline_100), fill = list(plays = 0)) %>%
-    arrange(yardline_100) %>%
-    group_by(yardline_100) %>%
-    mutate(play_pct = (plays/sum(plays))*100) %>%
-    cast(yardline_100~play_type))
+# renderTable(playData()%>%
+#     group_by(yardline_100, play_type) %>%
+#     summarize(plays = n()) %>%
+#     ungroup() %>%
+#     complete(play_type, nesting(yardline_100), fill = list(plays = 0)) %>%
+#     arrange(yardline_100) %>%
+#     group_by(yardline_100) %>%
+#     mutate(play_pct = (plays/sum(plays))*100) %>%
+#     cast(yardline_100~play_type))
 
 renderPlotly(
-  playData() %>%
-    group_by(yardline_100, play_type) %>%
-    summarize(plays = n()) %>%
-    ungroup() %>%
-    complete(play_type, nesting(yardline_100), fill = list(plays = 0)) %>%
-    arrange(yardline_100) %>%
-    group_by(yardline_100) %>%
-    mutate(play_pct = (plays/sum(plays))*100) %>%
-    cast(yardline_100~play_type, value = 'plays') %>%
-    plot_ly(
-      x=~yardline_100, 
-      y=~field_goal,
-      name = "Field Goal",
-      type = 'scatter', 
-      mode = 'lines', 
-      fill = 'tozeroy'
-    ) %>% 
-    add_trace(x = ~yardline_100, y = ~no_play, name = 'No Play', fill = 'tozeroy') %>%
-    add_trace(x = ~yardline_100, y = ~pass, name = 'Pass', fill = 'tozeroy') %>%
-    add_trace(x = ~yardline_100, y = ~qb_kneel, name = 'QB Kneel', fill = 'tozeroy') %>%
-    add_trace(x = ~yardline_100, y = ~qb_spike, name = 'QB Spike', fill = 'tozeroy') %>%
-    add_trace(x = ~yardline_100, y = ~run, name = 'Run', fill = 'tozeroy')
+  # playData() %>%
+  #   group_by(yardline_100, play_type) %>%
+  #   summarize(plays = n()) %>%
+  #   ungroup() %>%
+  #   complete(play_type, nesting(yardline_100), fill = list(plays = 0)) %>%
+  #   arrange(yardline_100) %>%
+  #   group_by(yardline_100) %>%
+  #   mutate(play_pct = (plays/sum(plays))*100) %>%
+  #   cast(yardline_100~play_type, value = 'plays') %>%
+  #   plot_ly(
+  #     x=~yardline_100, 
+  #     y=~field_goal,
+  #     name = "Field Goal",
+  #     type = 'scatter', 
+  #     mode = 'lines', 
+  #     fill = 'tozeroy'
+  #   ) %>% 
+  #   add_trace(x = ~yardline_100, y = ~no_play, name = 'No Play', fill = 'tozeroy') %>%
+  #   add_trace(x = ~yardline_100, y = ~pass, name = 'Pass', fill = 'tozeroy') %>%
+  #   add_trace(x = ~yardline_100, y = ~qb_kneel, name = 'QB Kneel', fill = 'tozeroy') %>%
+  #   add_trace(x = ~yardline_100, y = ~qb_spike, name = 'QB Spike', fill = 'tozeroy') %>%
+  #   add_trace(x = ~yardline_100, y = ~run, name = 'Run', fill = 'tozeroy')
+  ggplotly(
+    playData() %>%
+      group_by(yardline_100, play_type) %>%
+      mutate(success = ifelse(epa > 0, 1, 0)) %>%
+      summarize(positive = sum(success, na.rm = TRUE), plays = n()) %>%
+      mutate(convert = positive/plays) %>%
+      ungroup() %>%
+      complete(play_type, nesting(yardline_100), fill = list(positive = 0, plays = 0, convert = 0)) %>%
+      arrange(yardline_100) %>%
+      ggplot(aes(x = yardline_100, y = convert, color = play_type)) + 
+      geom_line()
+  )
 )
   
 
