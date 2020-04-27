@@ -26,3 +26,20 @@ Both of these in a Shiny webapp or something similar so that they're deployable/
 	- rtweets package
 	- fantasy football forum, ask a question
 		- what kinds of information would you like to know?
+
+
+- Refined:
+2019 post-season games
+Risky play = 4th down, not punt or field goal, yards to go > 3yds
+
+
+- Issues:
+70,000+ comments per game thread
+Originally thought game time data was robust enough to support this visualization, but the game time is only in game day + in-game time, rather than real-world time stamps
+
+
+- Pivot:
+Use Post-Game Threads
+4,000 comments
+Select box for each game
+Display game winner, score, risky plays per team, sentiment analysis

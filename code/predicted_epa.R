@@ -7,7 +7,7 @@ library(forcats)
 reg = readRDS("D:/Priyam/Desktop/INFO550_Final/code/reg_seasons.rds")
 
 test = reg %>%
-  filter(Season == 2019, down == 1, game_seconds_remaining <= 15*60, !is.na(play_type)) %>%
+  filter(Season == 2019, down == 1, qtr == 1, quarter_seconds_remaining <= 1*60, !is.na(play_type)) %>%
   select(Season, game_seconds_remaining, down, yardline_100, play_type, epa) %>%
   group_by(yardline_100, play_type) %>%
   mutate(success = ifelse(epa > 0, 1, 0)) %>%
@@ -18,5 +18,5 @@ test = reg %>%
   arrange(yardline_100)
 
 
-test %>% 
-  ggplot(aes(x = yardline_100, y = convert, color = play_type)) + geom_line()
+ggplotly(test %>% 
+  ggplot(aes(x = yardline_100, y = convert, color = play_type)) + geom_line() + geom_point())

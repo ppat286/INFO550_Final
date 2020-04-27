@@ -40,7 +40,8 @@ selectInput("year", "Choose a season",
                         "2017-2018" = 2017,
                         "2018-2019" = 2018,
                         "2019-2020" = 2019
-                        ))
+                        ), 
+            selected = 2019)
 
 selectInput("dwn", "Choose a down",
             choices = c("1st Down" = 1,
@@ -48,11 +49,17 @@ selectInput("dwn", "Choose a down",
                         "3rd Down" = 3,
                         "4th Down" = 4))
 
+selectInput("quarter", "Choose a quarter",
+            choices = c("1st Quarter" = 1,
+                        "2nd Quarter" = 2,
+                        "3rd Quarter" = 3,
+                        "4th Quarter" = 4,
+                        "Overtime" = 5))
 
-# Change this time remaining in quarter, add quarter selection box
-sliderInput("time", "Maximum time remaining in game:",
-                  min = 0, max = 60,
-                  value = 1, step = 5,
+# Add a "Show data" check box?
+sliderInput("time", "Time remaining in quarter:",
+                  min = 0, max = 15,
+                  value = 1, step = 1,
                   animate =
                     animationOptions(interval = 300, loop = TRUE))
 
@@ -63,13 +70,13 @@ playData = reactive({
   req(input$time)
   switch(input$type,
          "Preseason" = pre %>%
-           filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
            select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
          "Regular Season" = reg %>%
-           filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
            select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
          "Postseason" = post %>%
-           filter(Season == input$year, down == input$dwn, game_seconds_remaining <= input$time*60, !is.na(play_type)) %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
            select(Season, game_seconds_remaining, down, yardline_100, play_type, epa))
 })
 
@@ -120,7 +127,8 @@ renderPlotly(
       complete(play_type, nesting(yardline_100), fill = list(positive = 0, plays = 0, convert = 0)) %>%
       arrange(yardline_100) %>%
       ggplot(aes(x = yardline_100, y = convert, color = play_type)) + 
-      geom_line()
+      geom_smooth(se = FALSE, span = 0.5) + 
+      geom_point()
   )
 )
   
