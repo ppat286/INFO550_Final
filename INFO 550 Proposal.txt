@@ -40,6 +40,6 @@ Originally thought game time data was robust enough to support this visualizatio
 
 - Pivot:
 Use Post-Game Threads
-4,000 comments
-Select box for each game
+4-12k comments
+Select box for each game++
 Display game winner, score, risky plays per team, sentiment analysis

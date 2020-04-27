@@ -1,6 +1,9 @@
 library(tidyverse)
 library(lubridate)
 library(tidytext)
+library(ggjoy)
+library(textdata)
+
 
 post = readRDS("D:/Priyam/Desktop/INFO550_Final/code/post_seasons.rds")
 
@@ -36,8 +39,9 @@ hou_buff = read.csv("data/hou_buff.csv", stringsAsFactors = FALSE)
 
 # Convert UNIX time to regular time stamp
 hou_buff = hou_buff %>%
-  mutate(Created = floor_date(as_datetime(Created), unit = "minute")) %>%
-  select(Score, Created, Body)
+  mutate(Created = as_datetime(Created)) %>%
+  select(Score, Created, Body) %>%
+  filter(Created <= min(Created) + hours(1))
 
 
 hou_buff = as_tibble(hou_buff)
@@ -54,7 +58,10 @@ my_stop_words <- tibble(
     "https",
     "fucking",
     "fuck",
-    "shit"
+    "shit",
+    "football",
+    "nfl",
+    "league"
   ),
   lexicon = "reddit"
 )
@@ -62,12 +69,15 @@ my_stop_words <- tibble(
 all_stop_words <- stop_words %>%
   bind_rows(my_stop_words)
 
+
 hou_buff_sentiment = hou_buff_sentiment %>%
   anti_join(all_stop_words) %>%
-  inner_join(get_sentiments("bing")) %>%
-  mutate(score = ifelse(sentiment == "positive", 1, -1)) %>%
-  group_by(Created) %>%
-  summarize(sent_total = sum(score, na.rm = TRUE))
+  inner_join(get_sentiments("nrc"), by = "word")
+
+# %>%
+#   mutate(score = ifelse(sentiment == "positive", 1, -1)) %>%
+#   group_by(Created) %>%
+#   summarize(sent_total = sum(score, na.rm = TRUE))
 
 
 hou_buff_risky = risky %>%
@@ -75,16 +85,30 @@ hou_buff_risky = risky %>%
   mutate(time = ymd_hms(paste(game_date, time)))
 
 
-# Plot sentiment over time, overlay with risky plays
+# # Plot sentiment over time, overlay with risky plays
+# hou_buff_sentiment %>%
+#   ggplot(aes(x=Created, y=sent_total)) +
+#   geom_line() 
+# +  geom_vline(data = hou_buff_risky, aes(xintercept = time))
+
+
+
+# Visualize different sentiments over time
+
 hou_buff_sentiment %>%
-  ggplot(aes(x=Created, y=sent_total)) +
-  geom_line() +
-  geom_vline(data = hou_buff_risky, aes(xintercept = time))
-
-
-
-test = post %>%
-  filter(game_id == 2020010400)
+  ggplot() +
+  geom_joy(aes(
+    x = Created,
+    y = sentiment, 
+    fill = sentiment),
+    rel_min_height = 0.01,
+    alpha = 0.7,
+    scale = 3) +
+  theme_joy() +
+  labs(title = "/r/nfl HOU vs. BUF sentiment analysis",
+       x = "Comment Date",
+       y = "Sentiment") + 
+  scale_fill_discrete(guide=FALSE)
 
 
 
