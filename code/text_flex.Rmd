@@ -84,14 +84,16 @@ playData = reactive({
   switch(input$type,
          "Preseason" = pre %>%
            filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
+           select(Season, down, yardline_100, play_type, epa),
          "Regular Season" = reg %>%
            filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
+           select(Season, down, yardline_100, play_type, epa),
          "Postseason" = post %>%
            filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
-           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa))
+           select(Season, down, yardline_100, play_type, epa))
 })
+
+# Need season, down, quarter_seconds_remaining, quarter, play_type, yardline_100
 
 
 # For example, being on your own 20 yard line means you are 80 yards from their end zone, but being on their 20 yard line means you are 20 yards from their end zone.
@@ -140,6 +142,9 @@ radioButtons("down", "Choose a down:",
 sliderInput("yds_left", "Distance to first down:",
             min = 0, max = 10, value = 5)
 
+sliderInput("td_left", "Distance to goal:",
+            min = 0, max = 100, value = 50)
+
 sliderInput("time_left", "Time remaining in quarter:",
                   min = 0, max = 15, value = 5)
 
@@ -152,8 +157,94 @@ radioButtons("play_type", "Choose a play type:",
                         "QB Spike" = "qb_spike"
                         )
             )
+selectInput("pass_len", "Choose a pass length:",
+            choices = c("NA" = NA,
+                        "Deep" = "deep", 
+                        "Short" = "short"))
+
+selectInput("pass_loc", "Choose a pass location:",
+            choices = c("NA" = NA,
+                        "Left" = "left",
+                        "Middle" = "middle",
+                        "Right" = "right"))
+
+selectInput("r_gap", "Choose a run gap:",
+            choices = c("NA" = NA,
+                        "End" = "end", 
+                        "Guard" = "guard",
+                        "Tackle" = "tackle"))
+
+selectInput("r_loc", "Choose a run location:",
+            choices = c("NA" = NA,
+                        "Left" = "left",
+                        "Middle" = "middle",
+                        "Right" = "right"))
+
 
 ```
+
+```{r}
+# Success = epa >= 1.0 | first_down_rush == 1 | first_down_pass == 1
+# 1 point is the smallest increment of points in football, thus significant
+
+logData = reactive({
+  req(input$game_type)
+  switch(input$game_type,
+         "Preseason" = pre %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0)),
+         "Regular Season" = reg %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0)),
+         "Postseason" = post %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0))
+  )
+})
+
+
+renderPrint({
+  df = data.frame("qtr" = as.numeric(input$quar),
+                "down" = as.numeric(input$down),
+                "ydstogo" = input$yds_left,
+                "yardline_100" = input$td_left,
+                "quarter_seconds_remaining" = input$time_left*60,
+                "play_type" = input$play_type,
+                "pass_length" = input$pass_len,
+                "pass_location" = input$pass_loc,
+                "run_gap" = input$r_gap,
+                "run_location" = input$r_loc,
+                stringsAsFactors = FALSE)
+
+  if(input$play_type == "pass") {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + pass_length + pass_location,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , pass_length , pass_location, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  else if (input$play_type == "run") {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + run_gap + run_location,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , run_gap , run_location, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  else {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + play_type,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , play_type, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  
+  predicted = plogis(predict(logreg, df))
+  print(predicted)
+})
+
+
+```
+
 
 
 Page 3
