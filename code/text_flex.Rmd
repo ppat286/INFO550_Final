@@ -1,13 +1,14 @@
 ---
-title: "test"
-author: "Priyam Patel"
-date: "4/1/2020"
-output: html_document
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
 runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(flexdashboard)
 library(tidyverse)
 library(shiny)
 library(plotly)
@@ -19,17 +20,21 @@ library(ggjoy)
 library(textdata)
 ```
 
-## R Markdown
-
-```{r data, echo = FALSE}
+```{r global, include=FALSE}
 pre = readRDS("pre_seasons.rds")
 reg = readRDS("reg_seasons.rds")
 post = readRDS("post_seasons.rds")
 sent = readRDS("2019_sentiments.rds")
 ```
-## Playcalling Plot
-```{r plot, echo = FALSE}
-# https://rmarkdown.rstudio.com/lesson-14.html
+
+Page 1
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
 selectInput("type", "Choose a game type",
             choices = c("Preseason", "Regular Season", "Postseason"))
 
@@ -63,12 +68,15 @@ selectInput("quarter", "Choose a quarter",
 
 # Add a "Show data" check box?
 sliderInput("time", "Time remaining in quarter:",
-                  min = 0, max = 15,
-                  value = 1, step = 1,
-                  animate =
-                    animationOptions(interval = 300, loop = TRUE))
+                  min = 0, max = 15, value = 7)
+```
 
+Column 
+-----------------------------------------------------------------------
 
+### Chart A
+
+```{r}
 playData = reactive({
   req(input$dwn)
   req(input$year)
@@ -106,8 +114,13 @@ renderPlotly(
 
 ```
 
-## Playcalling Prediction
-```{r prediction, echo = FALSE}
+Page 2
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
 selectInput("game_type", "Choose a game type:",
             choices = c("Preseason", "Regular Season", "Postseason"))
 
@@ -131,22 +144,24 @@ sliderInput("time_left", "Time remaining in quarter:",
                   min = 0, max = 15, value = 5)
 
 radioButtons("play_type", "Choose a play type:",
-            choices = c("field_goal" = "field_goal",
-                        "pass" = "pass",
-                        "punt" = "punt",
-                        "run" = "run",
-                        "qb_kneel" = "qb_kneel",
-                        "qb_spike" = "qb_spike"
+            choices = c("Field Goal" = "field_goal",
+                        "Pass" = "pass",
+                        "Punt" = "punt",
+                        "Run" = "run",
+                        "QB Kneel" = "qb_kneel",
+                        "QB Spike" = "qb_spike"
                         )
             )
 
 ```
 
 
+Page 3
+=====================================  
 
-## Sentiment Analysis
-```{r sent_analysis, echo = FALSE}
-# Select game by gameid
+Column {.sidebar}
+-----------------------------------------------------------------------
+```{r}
 selectInput("game", "Choose a playoff game",
             choices = c("AFC First Round: Tennessee Titans at New England Patriots" = 2020010401,
                         "AFC First Round: Buffalo Bills at Houston Texans" = 2020010400,
@@ -161,7 +176,13 @@ selectInput("game", "Choose a playoff game",
                         "Super Bowl LIV: San Francisco 49ers at Kansas City Chiefs" = 2020020200
                         )
             )
+```
 
+Column 
+-----------------------------------------------------------------------
+
+### Chart A
+```{r}
 sentData = reactive({
   req(input$game)
   return(sent %>% filter(game_id == input$game))
@@ -183,6 +204,5 @@ renderPlot(
            y = "Sentiment") + 
       scale_fill_discrete(guide=FALSE)
 )
-
 ```
 

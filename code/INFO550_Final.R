@@ -72,6 +72,8 @@ reg_seasons = rbind(reg_2009,
       reg_2017,
       reg_2018,
       reg_2019)
+reg_seasons = within(reg_seasons, rm(desc))
+
 
 saveRDS(reg_seasons, "reg_seasons.rds")
 
@@ -112,6 +114,8 @@ pre_seasons = rbind(pre_2009,
                     pre_2017,
                     pre_2018,
                     pre_2019)
+
+pre_seasons = within(pre_seasons, rm(desc))
 
 saveRDS(pre_seasons, "pre_seasons.rds")
 
@@ -154,6 +158,8 @@ post_seasons = rbind(post_2009,
                     post_2017,
                     post_2018,
                     post_2019)
+
+within(post_seasons, rm(x))
 
 saveRDS(post_seasons, "post_seasons.rds")
 
