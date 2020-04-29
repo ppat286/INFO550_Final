@@ -1,7 +1,7 @@
 # INFO550_Final
 Final Project for INFO 550
 
-This repo contains all of the work for my INFO 550 Final Project. The final deliverable is the nfl_dashboard.R file, which requires 2019_sentiment.rds, post_seasons.rds, pre_seasons.rds, and reg_seasons.rds to run. 
+This code folder in this repo contains all of the work for my INFO 550 Final Project. The final deliverable is the nfl_dashboard.R file, which requires 2019_sentiment.rds, post_seasons.rds, pre_seasons.rds, and reg_seasons.rds to run. 
 
 nfl_dashboard.R lists all of its required libraries at the top of the file, and it also requires the nrc lexicon from the tidytext library. To download this lexicon, run "get_sentiments("nrc")" in your instance of R, which will prompt you to download the lexicon.
 
