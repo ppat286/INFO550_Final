@@ -1,0 +1,495 @@
+---
+title: "INFO 550 Final Project: The NFL Coaching Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    source_code: embed
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(shiny)
+library(plotly)
+library(reshape)
+library(forcats)
+library(lubridate)
+library(tidytext)
+library(ggjoy)
+library(textdata)
+library(wordcloud)
+```
+
+```{r global, include=FALSE}
+# Read in preseason, regular season, postseason, and completed sentiment analysis data
+pre = readRDS("pre_seasons.rds")
+reg = readRDS("reg_seasons.rds")
+post = readRDS("post_seasons.rds")
+sent = readRDS("2019_sentiments.rds")
+```
+
+Historical Playcalling
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
+# Create input selection controls for Historical Playcalling tab sidebar
+
+# Game type
+selectInput("type", "Choose a game type:",
+            choices = c("Preseason", "Regular Season", "Postseason"), selected = "Regular Season")
+
+selectInput("year", "Choose a season:",
+            choices = c("2009-2010" = 2009,
+                        "2010-2011" = 2010,
+                        "2011-2012" = 2011,
+                        "2012-2013" = 2012,
+                        "2013-2014" = 2013,
+                        "2014-2015" = 2014,
+                        "2015-2016" = 2015,
+                        "2016-2017" = 2016,
+                        "2017-2018" = 2017,
+                        "2018-2019" = 2018,
+                        "2019-2020" = 2019
+                        ), 
+            selected = 2019)
+
+# Down number
+selectInput("dwn", "Choose a down:",
+            choices = c("1st Down" = 1,
+                        "2nd Down" = 2,
+                        "3rd Down" = 3,
+                        "4th Down" = 4))
+
+# Quarter number
+selectInput("quarter", "Choose a quarter:",
+            choices = c("1st Quarter" = 1,
+                        "2nd Quarter" = 2,
+                        "3rd Quarter" = 3,
+                        "4th Quarter" = 4,
+                        "Overtime" = 5))
+
+# Time reamining in quarter (in minutes)
+sliderInput("time", "Time remaining in quarter:",
+                  min = 0, max = 15, value = 7)
+hr()
+# Add a "Show data" check box?
+checkboxInput("showdata", "Show Data Points", value = TRUE)
+```
+
+Column 
+-----------------------------------------------------------------------
+
+### Beneficial Plays
+
+```{r}
+# Create reactive dataset that switches between preseason, regular season, and postseason data based on 
+# sidebar inputs
+playData = reactive({
+  # Require filtering inputs before changing dataset
+  req(input$dwn)
+  req(input$year)
+  req(input$time)
+  # Select play by play dataset based on inputs, filter according to inputs
+  # Remove no_play (plays with penalties), qb_kneel, and qb_spike, as those plays aren't planned
+  # or won't result in significant percentage of postiive EPA
+  switch(input$type,
+         "Preseason" = pre %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, down, yardline_100, play_type, epa),
+         "Regular Season" = reg %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, down, yardline_100, play_type, epa),
+         "Postseason" = post %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, down, yardline_100, play_type, epa))
+  # Return reactive dataset with Season, down number, distance to TD, play type, and EPA
+})
+
+
+# Use renderplotly to display ggplot interactively
+renderPlotly(
+    ggplotly(
+      # Group plays by distance from TD and play type, flag successful plays, calculate percentage of successful
+      # plays per grouped distnace from TD, play type
+      # Fill dataset to ensure distances from TD without any plays of a certain type show up as 0
+      # Plot data using geom_smooth to show overall trend, as well as points
+      if(input$showdata == TRUE){
+        playData() %>%
+        group_by(yardline_100, play_type) %>%
+        mutate(success = ifelse(epa > 0, 1, 0)) %>%
+        summarize(positive = sum(success, na.rm = TRUE), plays = n()) %>%
+        mutate(convert = positive*100/plays) %>%
+        ungroup() %>%
+        complete(play_type, nesting(yardline_100), fill = list(positive = 0, plays = 0, convert = 0)) %>%
+        arrange(yardline_100) %>%
+        dplyr::rename(`Successful Plays` = convert, `Yards from Touchdown` = yardline_100, `Play Type` = play_type) %>%
+        ggplot(aes(x = `Yards from Touchdown`, 
+                   y = `Successful Plays`, 
+                   color = `Play Type`
+                   )
+               ) + 
+          geom_smooth(se = FALSE, span = 0.5) +
+          geom_point() + 
+          labs(title = "Playcall Performance by Distance from Touchdown", x = "Distance from Touchdown (Yards)", y = "% of Beneficial Plays (EPA > 0.0)", color = "Play Type") +
+          theme_bw()
+      }
+      else{
+                playData() %>%
+        group_by(yardline_100, play_type) %>%
+        mutate(success = ifelse(epa > 0, 1, 0)) %>%
+        summarize(positive = sum(success, na.rm = TRUE), plays = n()) %>%
+        mutate(convert = positive*100/plays) %>%
+        ungroup() %>%
+        complete(play_type, nesting(yardline_100), fill = list(positive = 0, plays = 0, convert = 0)) %>%
+        arrange(yardline_100) %>%
+        dplyr::rename(`Successful Plays` = convert, `Yards from Touchdown` = yardline_100, `Play Type` = play_type) %>%
+        ggplot(aes(x = `Yards from Touchdown`, 
+                   y = `Successful Plays`, 
+                   color = `Play Type`
+                   )
+               ) + 
+          geom_smooth(se = FALSE, span = 0.5) +
+          labs(title = "Playcall Performance by Distance from Touchdown", x = "Distance from Touchdown (Yards)", y = "% of Beneficial Plays (EPA > 0.0)", color = "Play Type") +
+          theme_bw()
+      }
+  )
+)
+
+```
+
+Play Call Effectiveness
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+# Create input selection controls for Play Call Effectiveness tab sidebar
+
+# Game type
+selectInput("game_type", "Choose a game type:",
+            choices = c("Preseason", "Regular Season", "Postseason"), selected = "Regular Season")
+
+# Quarter number
+radioButtons("quar", "Choose a quarter:",
+            choices = c("1st Quarter" = 1,
+                        "2nd Quarter" = 2,
+                        "3rd Quarter" = 3,
+                        "4th Quarter" = 4,
+                        "Overtime" = 5))
+
+# Down number
+radioButtons("down", "Choose a down:",
+            choices = c("1st Down" = 1,
+                        "2nd Down" = 2,
+                        "3rd Down" = 3,
+                        "4th Down" = 4))
+
+# Yards to first down
+sliderInput("yds_left", "Distance to first down:",
+            min = 0, max = 10, value = 5)
+
+# Yards to touchdown
+sliderInput("td_left", "Distance to goal:",
+            min = 0, max = 100, value = 50)
+
+# Time left in quarter, in minutes
+sliderInput("time_left", "Time remaining in quarter:",
+                  min = 0, max = 15, value = 5)
+
+# Play type
+radioButtons("play_type", "Choose a play type:",
+            choices = c("Field Goal" = "field_goal",
+                        "Pass" = "pass",
+                        "Punt" = "punt",
+                        "Run" = "run",
+                        "QB Kneel" = "qb_kneel",
+                        "QB Spike" = "qb_spike"
+                        )
+            )
+
+# Pass length
+selectInput("pass_len", "Choose a pass length:",
+            choices = c("NA" = NA,
+                        "Deep" = "deep", 
+                        "Short" = "short"))
+
+# Pass location
+selectInput("pass_loc", "Choose a pass location:",
+            choices = c("NA" = NA,
+                        "Left" = "left",
+                        "Middle" = "middle",
+                        "Right" = "right"))
+
+# Run gap location
+selectInput("r_gap", "Choose a run gap:",
+            choices = c("NA" = NA,
+                        "End" = "end", 
+                        "Guard" = "guard",
+                        "Tackle" = "tackle"))
+
+# Run location/direction
+selectInput("r_loc", "Choose a run location:",
+            choices = c("NA" = NA,
+                        "Left" = "left",
+                        "Middle" = "middle",
+                        "Right" = "right"))
+
+
+```
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+### Model Results
+```{r}
+# Create reactive dataset that switches between preseason, regular season, and postseason data based on 
+# sidebar inputs
+logData = reactive({
+  req(input$game_type)
+  # Create "success" variable
+  # Success = epa >= 1.0 | first_down_rush == 1 | first_down_pass == 1
+  # 1 point is the smallest increment of points in football, thus significant
+  switch(input$game_type,
+         "Preseason" = pre %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0)),
+         "Regular Season" = reg %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0)),
+         "Postseason" = post %>%
+           mutate(success = ifelse((epa >= 1 | first_down_rush == 1 | first_down_pass == 1), 1, 0))
+  )
+})
+
+
+logmod = reactive({
+  # If the play is a pass, include pass variables in model
+  if(input$play_type == "pass") {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + pass_length + pass_location,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , pass_length , pass_location, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  # If the play is a run, include run variables in model
+  else if (input$play_type == "run") {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + run_gap + run_location,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , run_gap , run_location, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  # If the play is not a pass or run, include play type in the model
+  else {
+    logreg = 
+      glm(success ~ qtr + down + ydstogo + yardline_100 + quarter_seconds_remaining + play_type,
+          data = logData() %>%
+      select(qtr, down , ydstogo , yardline_100, quarter_seconds_remaining , play_type, success) %>%
+      na.omit,
+      family=binomial(link="logit"))
+  }
+  # Return model
+  return(logreg)
+})
+
+renderUI({
+   # Create a play dataframe based on inputs
+  df = data.frame("qtr" = as.numeric(input$quar),
+                "down" = as.numeric(input$down),
+                "ydstogo" = input$yds_left,
+                "yardline_100" = input$td_left,
+                "quarter_seconds_remaining" = input$time_left*60,
+                "play_type" = input$play_type,
+                "pass_length" = input$pass_len,
+                "pass_location" = input$pass_loc,
+                "run_gap" = input$r_gap,
+                "run_location" = input$r_loc,
+                stringsAsFactors = FALSE)
+  
+  # Validate inputs if the play requires pass inputs, then run model on inputs
+  if(input$play_type== "pass"){
+    validate(
+      need(try(plogis(predict(logmod(), df))), "Please select a pass length and location.")
+      )
+    predicted = plogis(predict(logmod(), df))
+    # Output narrative and model results
+    HTML(
+      paste0(
+    "You're currently have the ball in Quarter <b>", input$quar, "</b>, on down <b>", input$down, "</b> with <b>",
+    input$yds_left, "</b> yards to go for a first down, and <b>", input$td_left, "</b> yards to go for a touchdown. There are <b>", input$time_left, "</b> minutes left in the quarter.", "<br>","<br>",
+    "You want to <b>", input$play_type, "</b> the ball a <b>", input$pass_len, "</b> distance to the <b>", input$pass_loc, " side of the field.", "<br>","<br>",
+    "Your play has a <b>", round(predicted*100, digits = 2), "%</b> chance of success. <br><i>A successful result is indicated by an Expected Points Added (EPA) value greater than or equal to 1.0, a first down, a touchdown, or a field goal.</i>"
+    )
+    )
+  }
+  
+  # Validate inputs if the play requires run inputs, then run model on inputs
+  if(input$play_type== "run"){
+    validate(
+      need(try(plogis(predict(logmod(), df))), "Please select a run gap and location.")
+      )
+    predicted = plogis(predict(logmod(), df))
+    # Output narrative and model results
+    HTML(
+      paste0(
+    "You're currently have the ball in Quarter <b>", input$quar, "</b>, on down <b>", input$down, "</b> with <b>",
+    input$yds_left, "</b> yards to go for a first down, and <b>", input$td_left, "</b> yards to go for a touchdown. There are <b>", input$time_left, " minutes left in the quarter.", "<br>","<br>",
+    "You want to <b>", input$play_type, "</b> the ball through the <b>", input$r_gap, "</b> gap to the <b>", r_loc, "</b> side of the field.", "<br>", "<br>",
+    "Your play has a <b>", round(predicted*100, digits = 2), "%</b> chance of success. <br><i>A successful result is indicated by an Expected Points Added (EPA) value greater than or equal to 1.0, a first down, a touchdown, or a field goal.</i>"
+    )
+    )
+  }
+  # Run model on inputs
+  else{
+    predicted = plogis(predict(logmod(), df))
+  }
+  # Output narrative and model results
+  HTML(paste0(
+    "You're currently have the ball in Quarter <b>", input$quar, "</b>, on down <b>", input$down, "</b> with <b>",
+    input$yds_left, "</b> yards to go for a first down, and <b>", input$td_left, "</b> yards to go for a touchdown. There are <b>", input$time_left, "</b> minutes left in the quarter.", "<br>","<br>",
+    "You want to <b>", input$play_type, "</b> the ball.", "<br>","<br>",
+    "Your play has a <b>", round(predicted*100, digits = 2), "%</b> chance of success. <br><i>A successful result is indicated by an Expected Points Added (EPA) value greater than or equal to 1.0, a first down, a touchdown, or a field goal.</i>"
+    ))
+  
+})
+
+```
+
+### Model Description
+```{r}
+# Output model description
+renderPrint({
+  print(logmod())
+})
+```
+
+
+
+Playoff Sentiments
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+# Create input selection controls for Playoff Sentiments tab sidebar
+
+# Select 2019 Playoff Game, store game ID as input
+selectInput("game", "Choose a playoff game:",
+            choices = c("AFC First Round: Tennessee Titans at New England Patriots" = 2020010401,
+                        "AFC First Round: Buffalo Bills at Houston Texans" = 2020010400,
+                        "NFC First Round: Seattle Seahawks at Philadelphia Eagles" = 2020010501,
+                        "NFC First Round: Minnesota Vikings at New Orleans Saints" = 2010012401,
+                        "AFC Second Round: Tennessee Titans at Baltimore Ravens" = 2020011101,
+                        "AFC Second Round: Houston Texans at Kansas City Chiefs" = 2020011200,
+                        "NFC Second Round: Seattle Seahawks at Green Bay Packers" = 2020011201,
+                        "NFC Second Round: Minnesota Vikings at San Francisco 49ers" = 2020011100,
+                        "AFC Championship: Tennesee Titans at Kansas City Chiefs" = 2020011900,
+                        "NFC Championship: Green Bay Packers at San Francisco 49ers" = 2020011901,
+                        "Super Bowl LIV: San Francisco 49ers at Kansas City Chiefs" = 2020020200
+                        )
+            )
+hr()
+
+```
+
+__Word Cloud Controls__
+```{r}
+# Input controls for word cloud
+sliderInput("freq",
+            "Minimum Frequency:",
+            min = 1,  max = 50, value = 15)
+sliderInput("max",
+            "Maximum Number of Words:",
+            min = 1,  max = 300,  value = 100)
+```
+
+
+Column 
+-----------------------------------------------------------------------
+
+### Playoff Postgame Sentiment
+```{r}
+# Create reactive dataset based on selected game, filter sentiment dataset for corresponding postgame
+# Reddit thread sentiments
+
+# Create list of stop words, words that don't really add to sentiment
+my_stop_words <- tibble(
+  word = c(
+    "https",
+    "fucking",
+    "fuck",
+    "shit",
+    "football",
+    "nfl",
+    "league"
+  ),
+  lexicon = "reddit"
+)
+# Bind to existing list of stop words
+all_stop_words <- stop_words %>%
+  bind_rows(my_stop_words)
+
+# Create reactive dataset with parsed text for selected game
+sentData = reactive({
+  req(input$game)
+  return(sent %>% filter(game_id == input$game))
+})
+
+# Create plot of sentiments
+renderPlot(
+    sentData() %>%
+      anti_join(all_stop_words) %>%
+      inner_join(get_sentiments("nrc"), by = "word") %>%
+      ggplot() +
+      geom_joy(aes(
+        x = Created,
+        y = sentiment, 
+        fill = sentiment),
+        rel_min_height = 0.01,
+        alpha = 0.7,
+        scale = 3) +
+      theme_joy() +
+      labs(title = paste("/r/nfl", post$away_team[post$game_id == as.numeric(input$game)][1], "at", post$home_team[post$game_id == as.numeric(input$game)][1], "Postgame Sentiment"),
+           x = "Comment Posted Time",
+           y = "Sentiment") + 
+      scale_fill_discrete(guide=FALSE)
+)
+
+```
+
+Column 
+-----------------------------------------------------------------------
+### Word Cloud of Postgame Comments from /r/nfl
+
+```{r}
+# For reproducibility, set seed
+set.seed(1234)
+# Remove stop words, count word totals, and plot word cloud
+renderPlot(
+  sentData() %>%
+    anti_join(all_stop_words) %>%
+    inner_join(get_sentiments("nrc"), by = "word") %>%
+    count(word, sort=TRUE) %>%
+    with(wordcloud(words = word,
+              freq = n, 
+              min.freq = input$freq,
+              max.words= input$max, 
+              random.order=FALSE, 
+              rot.per=0.35,            
+              colors=brewer.pal(8, "Dark2"),
+              scale=c(8,0.57)
+              )
+    )
+  )
+
+```
+
+

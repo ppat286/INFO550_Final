@@ -1,0 +1,188 @@
+---
+title: "test"
+author: "Priyam Patel"
+date: "4/1/2020"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(shiny)
+library(plotly)
+library(reshape)
+library(forcats)
+library(lubridate)
+library(tidytext)
+library(ggjoy)
+library(textdata)
+```
+
+## R Markdown
+
+```{r data, echo = FALSE}
+pre = readRDS("pre_seasons.rds")
+reg = readRDS("reg_seasons.rds")
+post = readRDS("post_seasons.rds")
+sent = readRDS("2019_sentiments.rds")
+```
+## Playcalling Plot
+```{r plot, echo = FALSE}
+# https://rmarkdown.rstudio.com/lesson-14.html
+selectInput("type", "Choose a game type",
+            choices = c("Preseason", "Regular Season", "Postseason"))
+
+selectInput("year", "Choose a season",
+            choices = c("2009-2010" = 2009,
+                        "2010-2011" = 2010,
+                        "2011-2012" = 2011,
+                        "2012-2013" = 2012,
+                        "2013-2014" = 2013,
+                        "2014-2015" = 2014,
+                        "2015-2016" = 2015,
+                        "2016-2017" = 2016,
+                        "2017-2018" = 2017,
+                        "2018-2019" = 2018,
+                        "2019-2020" = 2019
+                        ), 
+            selected = 2019)
+
+selectInput("dwn", "Choose a down",
+            choices = c("1st Down" = 1,
+                        "2nd Down" = 2,
+                        "3rd Down" = 3,
+                        "4th Down" = 4))
+
+selectInput("quarter", "Choose a quarter",
+            choices = c("1st Quarter" = 1,
+                        "2nd Quarter" = 2,
+                        "3rd Quarter" = 3,
+                        "4th Quarter" = 4,
+                        "Overtime" = 5))
+
+# Add a "Show data" check box?
+sliderInput("time", "Time remaining in quarter:",
+                  min = 0, max = 15,
+                  value = 1, step = 1,
+                  animate =
+                    animationOptions(interval = 300, loop = TRUE))
+
+
+playData = reactive({
+  req(input$dwn)
+  req(input$year)
+  req(input$time)
+  switch(input$type,
+         "Preseason" = pre %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
+         "Regular Season" = reg %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa),
+         "Postseason" = post %>%
+           filter(Season == input$year, down == input$dwn, quarter_seconds_remaining <= input$time*60, !is.na(play_type), qtr == input$quarter, !(play_type %in% c("no_play", "qb_kneel", "qb_spike"))) %>%
+           select(Season, game_seconds_remaining, down, yardline_100, play_type, epa))
+})
+
+
+# For example, being on your own 20 yard line means you are 80 yards from their end zone, but being on their 20 yard line means you are 20 yards from their end zone.
+
+renderPlotly(
+    ggplotly(
+      playData() %>%
+      group_by(yardline_100, play_type) %>%
+      mutate(success = ifelse(epa > 0, 1, 0)) %>%
+      summarize(positive = sum(success, na.rm = TRUE), plays = n()) %>%
+      mutate(convert = positive/plays) %>%
+      ungroup() %>%
+      complete(play_type, nesting(yardline_100), fill = list(positive = 0, plays = 0, convert = 0)) %>%
+      arrange(yardline_100) %>%
+      ggplot(aes(x = yardline_100, y = convert, color = play_type)) + 
+      geom_smooth(se = FALSE, span = 0.5) + 
+      geom_point()
+  )
+)
+
+```
+
+## Playcalling Prediction
+```{r prediction, echo = FALSE}
+selectInput("game_type", "Choose a game type:",
+            choices = c("Preseason", "Regular Season", "Postseason"))
+
+radioButtons("quar", "Choose a quarter:",
+            choices = c("1st Quarter" = 1,
+                        "2nd Quarter" = 2,
+                        "3rd Quarter" = 3,
+                        "4th Quarter" = 4,
+                        "Overtime" = 5))
+
+radioButtons("down", "Choose a down:",
+            choices = c("1st Down" = 1,
+                        "2nd Down" = 2,
+                        "3rd Down" = 3,
+                        "4th Down" = 4))
+
+sliderInput("yds_left", "Distance to first down:",
+            min = 0, max = 10, value = 5)
+
+sliderInput("time_left", "Time remaining in quarter:",
+                  min = 0, max = 15, value = 5)
+
+radioButtons("play_type", "Choose a play type:",
+            choices = c("field_goal" = "field_goal",
+                        "pass" = "pass",
+                        "punt" = "punt",
+                        "run" = "run",
+                        "qb_kneel" = "qb_kneel",
+                        "qb_spike" = "qb_spike"
+                        )
+            )
+
+```
+
+
+
+## Sentiment Analysis
+```{r sent_analysis, echo = FALSE}
+# Select game by gameid
+selectInput("game", "Choose a playoff game",
+            choices = c("AFC First Round: Tennessee Titans at New England Patriots" = 2020010401,
+                        "AFC First Round: Buffalo Bills at Houston Texans" = 2020010400,
+                        "NFC First Round: Seattle Seahawks at Philadelphia Eagles" = 2020010501,
+                        "NFC First Round: Minnesota Vikings at New Orleans Saints" = 2010012401,
+                        "AFC Second Round: Tennessee Titans at Baltimore Ravens" = 2020011101,
+                        "AFC Second Round: Houston Texans at Kansas City Chiefs" = 2020011200,
+                        "NFC Second Round: Seattle Seahawks at Green Bay Packers" = 2020011201,
+                        "NFC Second Round: Minnesota Vikings at San Francisco 49ers" = 2020011100,
+                        "AFC Championship: Tennesee Titans at Kansas City Chiefs" = 2020011900,
+                        "NFC Championship: Green Bay Packers at San Francisco 49ers" = 2020011901,
+                        "Super Bowl LIV: San Francisco 49ers at Kansas City Chiefs" = 2020020200
+                        )
+            )
+
+sentData = reactive({
+  req(input$game)
+  return(sent %>% filter(game_id == input$game))
+})
+
+renderPlot(
+    sentData() %>%
+      ggplot() +
+      geom_joy(aes(
+        x = Created,
+        y = sentiment, 
+        fill = sentiment),
+        rel_min_height = 0.01,
+        alpha = 0.7,
+        scale = 3) +
+      theme_joy() +
+      labs(title = paste("/r/nfl", post$away_team[post$game_id == 2020010401][1], "at", post$home_team[post$game_id == input$game][1], "Postgame Sentiment Analysis"),
+           x = "Comment Posted Time",
+           y = "Sentiment") + 
+      scale_fill_discrete(guide=FALSE)
+)
+
+```
+
